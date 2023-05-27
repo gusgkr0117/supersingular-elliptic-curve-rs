@@ -1,0 +1,11 @@
+[package]
+name = "supersingular-elliptic-curve"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+num = { version = "0.4.0", features = ["rand"] }
+num-prime = { version = "0.4.3", features = ["num-bigint"] }
+rand = "0.8.5"
