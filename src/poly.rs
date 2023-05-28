@@ -2,14 +2,32 @@
 use crate::fp::{Field, FieldElement, DynZero};
 use std::ops::{Add, Sub, Mul, Neg};
 use std::cmp::max;
+use std::fmt;
 
 /// Polynomial refers to a [Field](crate::fp::Field) for [FieldElement](crate::fp::FieldElement)
 /// It takes the lifetime of the [Field](crate::fp::Field)
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
     field : &'a F, 
     coefficient : Vec<E>,
 }
+
+impl<'a, F, E> fmt::Debug for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in (1..self.coefficient.len()).rev() {
+            write!(f, "{:?}x^{:?} + ", self.coefficient[i], i)?;
+        }
+        
+        if self.degree() == 0 {
+            write!(f, "0")?;
+        }else {
+            write!(f, "{:?}", self.coefficient[0])?;
+        }
+
+        Ok(())
+    }
+}
+
 
 impl<'a, F, E> Polynomial<'a, F, E> where &'a F : Field<'a, E>, E: FieldElement<'a> {
     pub fn new(field : &'a F, coefficient : Vec<E>) -> Self {
@@ -19,19 +37,88 @@ impl<'a, F, E> Polynomial<'a, F, E> where &'a F : Field<'a, E>, E: FieldElement<
         }
     }
 
-    pub fn degree(&self) -> usize {
-        self.coefficient.len()
+    pub fn is_zero(&self) -> bool {
+        self.coefficient.len() == 0
     }
+
+    pub fn degree(&self) -> usize {
+        match self.is_zero() {
+            true => 0,
+            false => self.coefficient.len() - 1,
+        }
+    }
+
+    pub fn normalize(&mut self) {
+        if Some(&self.field.zero()) == self.coefficient.last() {
+            let len = self.coefficient.iter().rposition(|d| d.clone() != self.field.zero()).map_or(0, |i| i + 1);
+            self.coefficient.truncate(len);
+        }
+
+        if self.coefficient.len() < self.coefficient.capacity() / 4 {
+            self.coefficient.shrink_to_fit();
+        }
+    }
+
 }
 
-impl<'a, F, E> Add for Polynomial<'a, F, E> where &'a F: Field<'a, E> , E: FieldElement<'a> {
+impl<'a, F, E> Add for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
     type Output = Polynomial<'a, F, E>;
     fn add(self, rhs:Self) -> Self::Output {
-        let mut result_coeff = vec![self.field.zero(); max(self.degree(), rhs.degree())];
+        if self.is_zero() {
+            return rhs;
+        }
+
+        if rhs.is_zero() {
+            return self;
+        }
+
+        let mut result_coeff = vec![self.field.zero(); max(self.degree(), rhs.degree()) + 1];
 
         for i in 0..result_coeff.len() {
             if i < self.degree() { result_coeff[i] = result_coeff[i].clone() + self.coefficient[i].clone();}
             if i < rhs.degree() { result_coeff[i] = result_coeff[i].clone() + rhs.coefficient[i].clone();}
+        }
+
+        let mut result = Polynomial {
+            field : self.field,
+            coefficient : result_coeff
+        };
+        result.normalize();
+
+        result
+    }
+}
+
+impl<'a, F, E> Neg for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        Polynomial {
+            field : self.field,
+            coefficient : self.coefficient.iter().map(|x| -x.clone()).collect(),
+        }
+    }
+}
+
+impl<'a, F, E> Sub for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+    type Output = Polynomial<'a, F, E>;
+    fn sub(self, rhs:Self) -> Self::Output {
+        self + (-rhs)
+    }
+}
+
+impl<'a, F, E> Mul for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+    type Output = Polynomial<'a, F, E>;
+    fn mul(self, rhs:Self) -> Self::Output {
+        if self.is_zero() || rhs.is_zero() {
+            return Polynomial{field:self.field, coefficient:vec![]}
+        }
+
+        let mut result_coeff = vec![self.field.zero(); self.degree() + rhs.degree() + 1];
+
+        for i in 0..self.degree() + 1 {
+            for j in 0..rhs.degree() + 1 {
+                result_coeff[i + j] = result_coeff[i + j].clone() + self.coefficient[i].clone() * rhs.coefficient[j].clone();
+            }
         }
 
         Polynomial {
@@ -58,7 +145,7 @@ mod tests{
         let poly1 = Polynomial::new(&fp, vec![coeff1.clone(), coeff2.clone(), coeff3.clone()]);
         let poly2 = Polynomial::new(&fp, vec![coeff1, coeff2, coeff3]);
 
-        let poly3 = poly1 + poly2;
-        println!("{:?}", poly3);
+        let poly3 = poly1.clone() * poly2.clone();
+        println!("({:?}) * ({:?}) = {:?}", poly1, poly2, poly3);
     }
 }
