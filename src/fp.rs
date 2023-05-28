@@ -1,5 +1,6 @@
 //! Implementation of finite fields using [num](https://crates.io/crates/num) library
-use std::ops::{Add, Sub, Mul};
+use core::fmt;
+use std::ops::{Add, Sub, Mul, Neg};
 use num::{BigInt, BigUint, Zero};
 use num::bigint::{ToBigInt, Sign};
 use num_prime::buffer::NaiveBuffer;
@@ -8,10 +9,10 @@ use impl_ops::*;
 use std::ops;
 
 /// Base trait for Field types
-pub trait Field<'a, T:FieldElement<'a>> : DynZero<'a, Output=T> {}
+pub trait Field<'a, T:FieldElement<'a>> : DynZero<'a, Output=T> + Clone {}
 /// FieldElement must refer a Field
 /// Thus it must take as input the lifetime of the Field
-pub trait FieldElement<'a> : Add<Output=Self> + Sub + Mul + Sized + Clone {}
+pub trait FieldElement<'a> : Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Neg<Output=Self> + Sized + PartialEq + Clone + fmt::Debug {}
 
 /// Trait for the additive identity of a dynamic field type
 /// Output a field element
@@ -21,7 +22,7 @@ pub trait DynZero<'a> {
 }
 
 /// Type for a base of a finite field(extension degree = 1)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FiniteField {
     prime : BigUint,
 }
@@ -30,9 +31,8 @@ impl FiniteField {
     /// The input [BigUint](num::BigUint) must be prime or it will panic
     pub fn new(prime : &BigUint) -> Self {
         let pb = NaiveBuffer::new();
-        if !pb.is_prime(prime, None).probably() {
-            panic!("The number is not prime");
-        }
+        assert!(pb.is_prime(prime, None).probably(), "The base number is not prime!");
+        
         FiniteField {
             prime : prime.clone()
         }
@@ -62,10 +62,16 @@ impl<'a> DynZero<'a> for &'a FiniteField{
 
 /// FiniteFieldElement type for the elements in [FiniteField](FiniteField)
 /// FiniteFieldElement refers to a [FiniteField](FiniteField)
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct FiniteFieldElement<'a> {
     field : &'a FiniteField,
     num : BigUint,
+}
+
+impl<'a> fmt::Debug for FiniteFieldElement<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.num)
+    }
 }
 
 impl<'a> FieldElement<'a> for FiniteFieldElement<'a> {}
@@ -85,6 +91,21 @@ impl<'a> FiniteFieldElement<'a> {
         }
     }
 }
+
+impl<'a> Neg for FiniteFieldElement<'a> {
+    type Output = Self;
+    fn neg(self) -> Self {
+        FiniteFieldElement { field: self.field, num: self.field.prime() - self.num }
+    }
+}
+
+impl<'a> PartialEq for FiniteFieldElement<'a> {
+    fn eq(&self, rhs:&Self) -> bool {
+        assert!(self.field.prime() == rhs.field.prime(), "The base field is not equal");
+        self.num == rhs.num
+    }
+}
+
 
 impl_op!(+ |lhs: &FiniteFieldElement<'a>, rhs: &FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
     let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
