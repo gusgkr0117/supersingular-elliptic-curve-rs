@@ -1,18 +1,18 @@
 //! Polynomial with field coefficient
 use crate::fp::{Field, FieldElement, DynZero};
-use std::ops::{Add, Sub, Mul, Neg};
+use std::ops::{Add, Sub, Mul, Neg, Rem};
 use std::cmp::max;
 use std::fmt;
 
 /// Polynomial refers to a [Field](crate::fp::Field) for [FieldElement](crate::fp::FieldElement)
 /// It takes the lifetime of the [Field](crate::fp::Field)
 #[derive(Clone)]
-pub struct Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+pub struct Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
     field : &'a F, 
     coefficient : Vec<E>,
 }
 
-impl<'a, F, E> fmt::Debug for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+impl<'a, F, E> fmt::Debug for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in (1..self.coefficient.len()).rev() {
             write!(f, "{:?}x^{:?} + ", self.coefficient[i], i)?;
@@ -29,7 +29,7 @@ impl<'a, F, E> fmt::Debug for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E:
 }
 
 
-impl<'a, F, E> Polynomial<'a, F, E> where &'a F : Field<'a, E>, E: FieldElement<'a> {
+impl<'a, F, E> Polynomial<'a, F, E> where &'a F : Field<'a, E>, E: FieldElement<'a>, F: Clone {
     pub fn new(field : &'a F, coefficient : Vec<E>) -> Self {
         Polynomial {
             field,
@@ -61,7 +61,7 @@ impl<'a, F, E> Polynomial<'a, F, E> where &'a F : Field<'a, E>, E: FieldElement<
 
 }
 
-impl<'a, F, E> Add for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+impl<'a, F, E> Add for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
     type Output = Polynomial<'a, F, E>;
     fn add(self, rhs:Self) -> Self::Output {
         if self.is_zero() {
@@ -89,7 +89,7 @@ impl<'a, F, E> Add for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldE
     }
 }
 
-impl<'a, F, E> Neg for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+impl<'a, F, E> Neg for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
     type Output = Self;
     fn neg(self) -> Self::Output {
         Polynomial {
@@ -99,14 +99,14 @@ impl<'a, F, E> Neg for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldE
     }
 }
 
-impl<'a, F, E> Sub for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+impl<'a, F, E> Sub for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
     type Output = Polynomial<'a, F, E>;
     fn sub(self, rhs:Self) -> Self::Output {
         self + (-rhs)
     }
 }
 
-impl<'a, F, E> Mul for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a> {
+impl<'a, F, E> Mul for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
     type Output = Polynomial<'a, F, E>;
     fn mul(self, rhs:Self) -> Self::Output {
         if self.is_zero() || rhs.is_zero() {
@@ -128,24 +128,49 @@ impl<'a, F, E> Mul for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldE
     }
 }
 
+impl<'a, F, E> Rem for Polynomial<'a, F, E> where &'a F: Field<'a, E> + Clone, E: FieldElement<'a>, F: Clone {
+    type Output = Polynomial<'a, F, E>;
+    fn rem(self, rhs: Self) -> Self::Output {
+        assert!(!rhs.is_zero(), "Can't devide by zero");
+        let mut result = self;
+
+        while rhs.degree() <= result.degree() {
+            if result.is_zero() {
+                return result;
+            }
+
+            let rhs_lc = rhs.coefficient.last().unwrap().clone();
+            let result_lc = result.coefficient.last().unwrap().clone();
+
+            let mut tmp = Polynomial::new(result.field, vec![result.field.zero(); result.degree() - rhs.degree()]);
+            tmp.coefficient.push(result_lc * rhs_lc.inv());
+
+            result = result.clone() - rhs.clone() * tmp;
+        }
+
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests{
     use super::*;
     use crate::fp::{FiniteField};
     use num::{BigInt, BigUint};
-    use num::bigint::Sign;
 
     #[test]
     fn polynomial_test() {
         // Fp11
-        let fp = FiniteField::new(&BigUint::new(vec![11]));
-        let coeff1 = fp.gen(&BigInt::new(Sign::Plus, vec![2]));
-        let coeff2 = fp.gen(&BigInt::new(Sign::Minus, vec![7]));
-        let coeff3 = fp.gen(&BigInt::new(Sign::Plus, vec![4]));
+        let fp = FiniteField::new(&BigUint::from(11 as u32));
+        let coeff1 = fp.gen(&BigInt::from(2));
+        let coeff2 = fp.gen(&BigInt::from(-7));
+        let coeff3 = fp.gen(&BigInt::from(4));
         let poly1 = Polynomial::new(&fp, vec![coeff1.clone(), coeff2.clone(), coeff3.clone()]);
-        let poly2 = Polynomial::new(&fp, vec![coeff1, coeff2, coeff3]);
+        let poly2 = Polynomial::new(&fp, vec![coeff3, coeff2, coeff1]);
+        
 
-        let poly3 = poly1.clone() * poly2.clone();
-        println!("({:?}) * ({:?}) = {:?}", poly1, poly2, poly3);
+        let poly3 = poly1.clone() * poly1.clone();
+        println!("({:?}) % ({:?}) = {:?}", poly3, poly1, poly3.clone() % poly1.clone());
+        println!("({:?}) % ({:?}) = {:?}", poly3, poly2, poly3.clone() % poly2.clone());
     }
 }
