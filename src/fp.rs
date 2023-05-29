@@ -1,7 +1,8 @@
 //! Implementation of finite fields using [num](https://crates.io/crates/num) library
 use core::fmt;
 use std::ops::{Add, Sub, Mul, Neg};
-use num::{BigInt, BigUint, Zero};
+use num::integer::ExtendedGcd;
+use num::{BigInt, BigUint, Zero, Integer, One};
 use num::bigint::{ToBigInt, Sign};
 use num_prime::buffer::NaiveBuffer;
 use num_prime::buffer::PrimeBufferExt;
@@ -12,13 +13,19 @@ use std::ops;
 pub trait Field<'a, T:FieldElement<'a>> : DynZero<'a, Output=T> + Clone {}
 /// FieldElement must refer a Field
 /// Thus it must take as input the lifetime of the Field
-pub trait FieldElement<'a> : Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Neg<Output=Self> + Sized + PartialEq + Clone + fmt::Debug {}
+pub trait FieldElement<'a> : Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Neg<Output=Self> + 
+MultiplicativeInverse + Sized + PartialEq + Clone + fmt::Debug {}
 
 /// Trait for the additive identity of a dynamic field type
 /// Output a field element
 pub trait DynZero<'a> {
     type Output : FieldElement<'a>;
     fn zero(self) -> Self::Output;
+}
+
+/// Field elements has its multiplicative inverse
+pub trait MultiplicativeInverse {
+    fn inv(&self) -> Self;
 }
 
 /// Type for a base of a finite field(extension degree = 1)
@@ -106,6 +113,16 @@ impl<'a> PartialEq for FiniteFieldElement<'a> {
     }
 }
 
+impl<'a> MultiplicativeInverse for FiniteFieldElement<'a> {
+    fn inv(&self) -> Self {
+        let ExtendedGcd {gcd, x, y:_y, ..} = self.num.extended_gcd(&self.field.prime());
+        assert!(gcd == BigUint::one(), "There is no multiplicative inverse of {self:?}");
+        FiniteFieldElement {
+            field : self.field,
+            num : x,
+        }
+    }
+}
 
 impl_op!(+ |lhs: &FiniteFieldElement<'a>, rhs: &FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
     let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
@@ -187,6 +204,7 @@ impl Mul for FiniteFieldElement<'_> {
         result
     }
 }
+
 
 #[cfg(test)]
 mod tests{
