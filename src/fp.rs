@@ -2,7 +2,7 @@
 use core::fmt;
 use std::ops::{Add, Sub, Mul, Neg};
 use num::integer::ExtendedGcd;
-use num::{BigInt, BigUint, Zero, Integer, One};
+use num::{BigInt, BigUint, Zero, Integer, One, Signed};
 use num::bigint::{ToBigInt, Sign};
 use num_prime::buffer::NaiveBuffer;
 use num_prime::buffer::PrimeBufferExt;
@@ -130,11 +130,19 @@ impl<'a> PartialEq for FiniteFieldElement<'a> {
 
 impl<'a> MultiplicativeInverse for FiniteFieldElement<'a> {
     fn inv(&self) -> Self {
-        let ExtendedGcd {gcd, x, y:_y, ..} = self.num.extended_gcd(&self.field.prime());
-        assert!(gcd == BigUint::one(), "There is no multiplicative inverse of {self:?}");
+        let num_i = self.num.to_bigint().unwrap();
+        let prime_i = self.field.prime().to_bigint().unwrap();
+        let ExtendedGcd {gcd, mut x, y:_y} = num_i.extended_gcd(&prime_i);
+        assert!(gcd == BigInt::one(), "There is no multiplicative inverse of {self:?}");
+
+        x %= &prime_i;
+        if x.is_negative() {
+            x += prime_i;
+        }
+
         FiniteFieldElement {
             field : self.field,
-            num : x,
+            num : x.to_biguint().unwrap(),
         }
     }
 }
@@ -233,7 +241,7 @@ fn field_test() {
     let b = &a + &a;
     let c = &b * &b;
 
-    println!("{:?}", b);
     println!("{:?}", c);
+    println!("{:?}", c.inv());
 }
 }
