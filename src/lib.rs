@@ -1,3 +1,3 @@
 pub mod matrix;
-pub mod fp;
+pub mod field;
 pub mod poly;

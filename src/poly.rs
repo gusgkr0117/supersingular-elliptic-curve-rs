@@ -1,5 +1,5 @@
 //! Polynomial with field coefficient
-use crate::fp::{Field, FieldElement, DynZero};
+use crate::field::{Field, FieldElement, DynZero};
 use std::ops::{Add, Sub, Mul, Neg, Rem};
 use std::cmp::max;
 use std::fmt;
@@ -155,7 +155,7 @@ impl<'a, F, E> Rem for Polynomial<'a, F, E> where &'a F: Field<'a, E> + Clone, E
 #[cfg(test)]
 mod tests{
     use super::*;
-    use crate::fp::{FiniteField};
+    use crate::field::fp::{FiniteField};
     use num::{BigInt, BigUint};
 
     #[test]
