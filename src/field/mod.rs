@@ -11,8 +11,8 @@ pub trait Field<'a> : Clone {
     /// Trait for the multiplicative identity of a dynamic field type
     /// Output a field element
     fn one(&'a self) -> Self::Element;
-
 }
+
 /// FieldElement must refer a Field
 /// Thus it must take as input the lifetime of the Field
 pub trait FieldElement : Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Neg<Output=Self> + 
