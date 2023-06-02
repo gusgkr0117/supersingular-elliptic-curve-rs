@@ -39,21 +39,15 @@ impl FiniteField {
 }
 
 /// FiniteField type is a [Field](Field)
-impl<'a> Field<'a, FiniteFieldElement<'a>> for &'a FiniteField {}
-
-/// Implement DynZero for [FiniteField](FiniteField)
-impl<'a> DynZero<'a> for &'a FiniteField{
-    type Output = FiniteFieldElement<'a>;
-    fn zero(self) -> FiniteFieldElement<'a> {
-        FiniteFieldElement::new(self, &BigInt::zero())
+impl<'a> Field<'a> for FiniteField {
+    type Element = FiniteFieldElement<'a>;
+    /// Implement DynZero for [FiniteField](FiniteField)
+    fn zero(&'a self) -> Self::Element {
+        self.gen(&BigInt::zero())
     }
-}
-
-/// Implement DynOne for [FiniteField](FiniteField)
-impl<'a> DynOne<'a> for &'a FiniteField{
-    type Output = FiniteFieldElement<'a>;
-    fn one(self) -> FiniteFieldElement<'a> {
-        FiniteFieldElement::new(self, &BigInt::one())
+    /// Implement DynOne for [FiniteField](FiniteField)
+    fn one(&'a self) -> Self::Element {
+        self.gen(&BigInt::one())
     }
 }
 
@@ -71,7 +65,7 @@ impl<'a> fmt::Debug for FiniteFieldElement<'a> {
     }
 }
 
-impl<'a> FieldElement<'a> for FiniteFieldElement<'a> {}
+impl<'a> FieldElement for FiniteFieldElement<'a> {}
 
 //impl PrimalityBase for BigInt {}
 impl<'a> FiniteFieldElement<'a> {

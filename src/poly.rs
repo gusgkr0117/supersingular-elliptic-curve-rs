@@ -1,5 +1,5 @@
 //! Polynomial with field coefficient
-use crate::field::{Field, FieldElement, DynZero};
+use crate::field::{Field, MultiplicativeInverse};
 use std::ops::{Add, Sub, Mul, Neg, Rem};
 use std::cmp::max;
 use std::fmt;
@@ -7,12 +7,12 @@ use std::fmt;
 /// Polynomial refers to a [Field](crate::fp::Field) for [FieldElement](crate::fp::FieldElement)
 /// It takes the lifetime of the [Field](crate::fp::Field)
 #[derive(Clone)]
-pub struct Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
+pub struct Polynomial<'a, F> where F: Field<'a> + Clone + 'a {
     field : &'a F, 
-    coefficient : Vec<E>,
+    coefficient : Vec<F::Element>,
 }
 
-impl<'a, F, E> fmt::Debug for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
+impl<'a, F> fmt::Debug for Polynomial<'a, F> where F: Field<'a> + Clone {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in (1..self.coefficient.len()).rev() {
             write!(f, "{:?}x^{:?} + ", self.coefficient[i], i)?;
@@ -29,8 +29,8 @@ impl<'a, F, E> fmt::Debug for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E:
 }
 
 
-impl<'a, F, E> Polynomial<'a, F, E> where &'a F : Field<'a, E>, E: FieldElement<'a>, F: Clone {
-    pub fn new(field : &'a F, coefficient : Vec<E>) -> Self {
+impl<'a, F> Polynomial<'a, F> where F : Field<'a> + Clone + 'a {
+    pub fn new(field : &'a F, coefficient : Vec<F::Element>) -> Self {
         Polynomial {
             field,
             coefficient,
@@ -61,8 +61,8 @@ impl<'a, F, E> Polynomial<'a, F, E> where &'a F : Field<'a, E>, E: FieldElement<
 
 }
 
-impl<'a, F, E> Add for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
-    type Output = Polynomial<'a, F, E>;
+impl<'a, F> Add for Polynomial<'a, F> where F: Field<'a> + Clone {
+    type Output = Self;
     fn add(self, rhs:Self) -> Self::Output {
         if self.is_zero() {
             return rhs;
@@ -89,7 +89,7 @@ impl<'a, F, E> Add for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldE
     }
 }
 
-impl<'a, F, E> Neg for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
+impl<'a, F> Neg for Polynomial<'a, F> where F: Field<'a> + Clone {
     type Output = Self;
     fn neg(self) -> Self::Output {
         Polynomial {
@@ -99,15 +99,15 @@ impl<'a, F, E> Neg for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldE
     }
 }
 
-impl<'a, F, E> Sub for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
-    type Output = Polynomial<'a, F, E>;
+impl<'a, F> Sub for Polynomial<'a, F> where F: Field<'a> + Clone {
+    type Output = Self;
     fn sub(self, rhs:Self) -> Self::Output {
         self + (-rhs)
     }
 }
 
-impl<'a, F, E> Mul for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldElement<'a>, F: Clone {
-    type Output = Polynomial<'a, F, E>;
+impl<'a, F> Mul for Polynomial<'a, F> where F: Field<'a> + Clone {
+    type Output = Self;
     fn mul(self, rhs:Self) -> Self::Output {
         if self.is_zero() || rhs.is_zero() {
             return Polynomial{field:self.field, coefficient:vec![]}
@@ -128,8 +128,8 @@ impl<'a, F, E> Mul for Polynomial<'a, F, E> where &'a F: Field<'a, E>, E: FieldE
     }
 }
 
-impl<'a, F, E> Rem for Polynomial<'a, F, E> where &'a F: Field<'a, E> + Clone, E: FieldElement<'a>, F: Clone {
-    type Output = Polynomial<'a, F, E>;
+impl<'a, F> Rem for Polynomial<'a, F> where F: Field<'a> + Clone {
+    type Output = Self;
     fn rem(self, rhs: Self) -> Self::Output {
         assert!(!rhs.is_zero(), "Can't devide by zero");
         let mut result = self;

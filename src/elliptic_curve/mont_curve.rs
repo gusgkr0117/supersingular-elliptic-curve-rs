@@ -1,16 +1,16 @@
 //! The elliptic curves of montgomery form
-use crate::field::{Field, FieldElement};
+use crate::field::{Field};
 
 /// The structure of a montgomery curve
-pub struct MontgomeryCurve<'a, F, E> where F: Field<'a, E>, E: FieldElement<'a> {
+pub struct MontgomeryCurve<'a, F> where F: Field<'a> + 'a {
     field : &'a F,
-    coeff : E,
+    coeff : F::Element,
 }
 
 /// The structure of a (projective coordinate)point of a montgomery curve
-pub struct MontgomeryCurvePoint<'a, F, E> where F: Field<'a, E>, E: FieldElement<'a> {
-    curve : &'a MontgomeryCurve<'a, F, E>,
-    x : E,
-    y : E,
-    z : E,
+pub struct MontgomeryCurvePoint<'a, F> where F: Field<'a> + 'a {
+    curve : &'a MontgomeryCurve<'a, F>,
+    x : F::Element,
+    y : F::Element,
+    z : F::Element,
 }
