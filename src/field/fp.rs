@@ -29,7 +29,15 @@ impl FiniteField {
 
     /// Output an initialized [FiniteFieldElement](FiniteFieldElement)
     pub fn gen(&self, num : &BigInt) -> FiniteFieldElement {
-        FiniteFieldElement::new(self, num)
+        let mut tmp = num % self.prime().to_bigint().unwrap();
+        if tmp.sign() == Sign::Minus {
+            tmp = &tmp + &self.prime().to_bigint().unwrap();
+        }
+
+        FiniteFieldElement{
+            field : self,
+            num : tmp.to_biguint().unwrap(),    
+        }
     }
 
     /// Output its prime
@@ -67,22 +75,6 @@ impl<'a> fmt::Debug for FiniteFieldElement<'a> {
 
 impl<'a> FieldElement for FiniteFieldElement<'a> {}
 
-//impl PrimalityBase for BigInt {}
-impl<'a> FiniteFieldElement<'a> {
-    pub fn new(field : &'a FiniteField, num : &BigInt) -> Self {
-        let prime = field.prime().clone();
-        let mut tmp = num % prime.to_bigint().unwrap();
-        if tmp.sign() == Sign::Minus {
-            tmp = &tmp + &prime.to_bigint().unwrap();
-        }
-
-        FiniteFieldElement {
-            field,
-            num : tmp.to_biguint().unwrap(),
-        }
-    }
-}
-
 impl<'a> Neg for FiniteFieldElement<'a> {
     type Output = Self;
     fn neg(self) -> Self {
@@ -117,19 +109,19 @@ impl<'a> MultiplicativeInverse for FiniteFieldElement<'a> {
 }
 
 impl_op!(+ |lhs: &FiniteFieldElement<'a>, rhs: &FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
-    let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
+    let mut result = lhs.field.gen(&BigInt::zero());
     result.num = (&lhs.num + &rhs.num) % &lhs.field.prime();
     result
 });
 
 impl_op!(+ |lhs: FiniteFieldElement<'a>, rhs: &FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
-    let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
+    let mut result = lhs.field.gen(&BigInt::zero());
     result.num = (&lhs.num + &rhs.num) % &lhs.field.prime();
     result
 });
 
 impl_op!(+ |lhs: &FiniteFieldElement<'a>, rhs: FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
-    let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
+    let mut result = lhs.field.gen(&BigInt::zero());
     result.num = (&lhs.num + &rhs.num) % &lhs.field.prime();
     result
 });
@@ -137,26 +129,26 @@ impl_op!(+ |lhs: &FiniteFieldElement<'a>, rhs: FiniteFieldElement<'a>| -> Finite
 impl<'a> Add for FiniteFieldElement<'a> {
     type Output = FiniteFieldElement<'a>;
     fn add(self, rhs : FiniteFieldElement<'a>) -> Self::Output {
-        let mut result = FiniteFieldElement::new(self.field, &BigInt::zero());
+        let mut result = self.field.gen(&BigInt::zero());
         result.num = (&self.num + &rhs.num) % &self.field.prime();
         result
     }
 }
 
 impl_op!(- |lhs: &FiniteFieldElement<'a>, rhs: &FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
-    let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
+    let mut result = lhs.field.gen(&BigInt::zero());
     result.num = (&lhs.num + &lhs.field.prime() - &rhs.num) % &lhs.field.prime();
     result
 });
 
 impl_op!(- |lhs: FiniteFieldElement<'a>, rhs: &FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
-    let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
+    let mut result = lhs.field.gen(&BigInt::zero());
     result.num = (&lhs.num + &lhs.field.prime() - &rhs.num) % &lhs.field.prime();
     result
 });
 
 impl_op!(- |lhs: &FiniteFieldElement<'a>, rhs: FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
-    let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
+    let mut result = lhs.field.gen(&BigInt::zero());
     result.num = (&lhs.num + &lhs.field.prime() - &rhs.num) % &lhs.field.prime();
     result
 });
@@ -164,26 +156,26 @@ impl_op!(- |lhs: &FiniteFieldElement<'a>, rhs: FiniteFieldElement<'a>| -> Finite
 impl Sub for FiniteFieldElement<'_> {
     type Output = Self;
     fn sub(self, rhs : Self) -> Self {
-        let mut result = FiniteFieldElement::new(self.field, &BigInt::zero());
+        let mut result = self.field.gen(&BigInt::zero());
         result.num = (&self.num + &self.field.prime() - &rhs.num) % &self.field.prime();
         result
     }
 }
 
 impl_op!(* |lhs: &FiniteFieldElement<'a>, rhs: &FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
-    let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
+    let mut result = lhs.field.gen(&BigInt::zero());
     result.num = (&lhs.num * &rhs.num) % &lhs.field.prime();
     result
 });
 
 impl_op!(* |lhs: FiniteFieldElement<'a>, rhs: &FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
-    let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
+    let mut result = lhs.field.gen(&BigInt::zero());
     result.num = (&lhs.num * &rhs.num) % &lhs.field.prime();
     result
 });
 
 impl_op!(* |lhs: &FiniteFieldElement<'a>, rhs: FiniteFieldElement<'a>| -> FiniteFieldElement<'a> {
-    let mut result = FiniteFieldElement::new(lhs.field, &BigInt::zero());
+    let mut result = lhs.field.gen(&BigInt::zero());
     result.num = (&lhs.num * &rhs.num) % &lhs.field.prime();
     result
 });
@@ -191,7 +183,7 @@ impl_op!(* |lhs: &FiniteFieldElement<'a>, rhs: FiniteFieldElement<'a>| -> Finite
 impl Mul for FiniteFieldElement<'_> {
     type Output = Self;
     fn mul(self, rhs : Self) -> Self {
-        let mut result = FiniteFieldElement::new(self.field, &BigInt::zero());
+        let mut result = self.field.gen(&BigInt::zero());
         result.num = (&self.num * &rhs.num) % &self.field.prime();
         result
     }
@@ -206,7 +198,7 @@ mod tests{
 fn field_test() {
     let p = BigUint::new(vec![11]);
     let fp = FiniteField::new(&p);
-    let a = FiniteFieldElement::new(&fp, &BigInt::new(Sign::Minus,vec![2]));
+    let a = fp.gen(&BigInt::new(Sign::Minus,vec![2]));
     let b = &a + &a;
     let c = &b * &b;
 
