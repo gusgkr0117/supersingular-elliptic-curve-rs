@@ -3,7 +3,7 @@ use std::ops::{Add, Sub, Mul, Neg};
 use std::fmt;
 
 /// Base trait for Field types
-pub trait Field<'a> : Clone {
+pub trait Field<'a> : Clone + fmt::Debug {
     type Element : FieldElement + 'a;
     /// Trait for the additive identity of a dynamic field type
     /// Output a field element
