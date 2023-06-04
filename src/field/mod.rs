@@ -14,6 +14,7 @@ pub trait Field<'a> : Clone + fmt::Debug {
     fn one(&'a self) -> Self::Element;
 
     /// Generate a random field element
+    /// self.rand(Some(size)) or self.rand(None)
     fn rand(&'a self, size : Option<usize>) -> Self::Element;
 }
 
@@ -25,4 +26,8 @@ Sized + PartialEq + Clone + fmt::Debug {
     fn inv(&self) -> Self;
     /// Whether it's zero or not
     fn is_zero(&self) -> bool;
+    /// Compute the power operation
+    fn pow(&self, exponent : &BigInt) -> Self;
+    /// Compute the square root
+    fn sqrt(&self) -> Option<Self>;
 }

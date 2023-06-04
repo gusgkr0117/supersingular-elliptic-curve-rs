@@ -110,6 +110,87 @@ impl<'a> FieldElement for FiniteFieldElement<'a> {
     fn is_zero(&self) -> bool {
         self.num.is_zero()
     }
+
+    /// Compute the power operation
+    fn pow(&self, exponent : &BigInt) -> Self {
+        let mut result = self.field.one();
+        let mut tmp_value = self.clone();
+
+        for digit in exponent.iter_u32_digits() {
+            for i in 0..32 {
+                if (digit >> i) & 1 == 1 {
+                    result = result.clone() * tmp_value.clone();
+                }
+                tmp_value = tmp_value.clone() * tmp_value.clone();
+            }
+        }
+        match exponent.sign() {
+            Sign::Minus => result.inv(),
+            _ => result,
+        }
+    }
+
+    /// Compute the square root using [Peralta's algorithm](https://arxiv.org/pdf/2206.07145.pdf)
+    fn sqrt(&self) -> Option<Self> {
+        let (mut u, mut v) : (FiniteFieldElement, FiniteFieldElement);
+        let prime = self.field.prime();
+
+        // Check the quadratic residuosity
+        let check_exp : BigUint = (prime.clone() - BigUint::one()) >> 1;
+        if self.pow(&check_exp.to_bigint().unwrap()) != self.field.one() {
+            return None;
+        }
+
+        if prime.clone() % (4 as u32) == BigUint::from(3 as u32) {
+            let exp : BigUint = (prime.clone() + BigUint::one()) >> 2;
+            return Some(self.pow(&exp.to_bigint().unwrap()));
+        }
+        
+        // Compute the square root
+        loop {
+            u = self.field.rand(None);
+            v = self.field.one();
+
+            // u + 1 * \sqrt{-a}
+            if u.clone() * u.clone() == -self.clone() {continue}
+            
+            // 1 + 0 * \sqrt{-a}
+            let (mut result_u, mut result_v) = (self.field.one(), self.field.zero());
+        
+            // compute odd number m such that (p - 1) = 2^e * m
+            let e = (prime.clone() - BigUint::one()).trailing_zeros().unwrap();
+            let m = (prime.clone() - BigUint::one()) >> e;
+
+            // compute (u + 1 * \sqrt{-a})^{m}
+            for digit in m.iter_u32_digits() {
+                for i in 0..32 {
+                    // compute result_u + result_v * \sqrt{-a} = (result_u + result_v * \sqrt{-a})(u + v * \sqrt{-a})
+                    if (digit >> i) & 1 == 1 {
+                        result_u = result_u.clone() * u.clone() - self.clone() * result_v.clone() * v.clone();
+                        result_v = result_v.clone() * u.clone() + result_u.clone() * v.clone();
+                    }
+
+                    // compute u + v * \sqrt{-a} = (u + v * \sqrt{a})^2
+                    u = u.clone() * u.clone() - self.clone() * v.clone() * v.clone();
+                    v = u.clone() * v.clone() + v.clone() * u.clone();
+                }
+            }
+
+            if result_u.is_zero() || result_v.is_zero() {continue}
+
+            for _ in 0..100 {
+                // (u + v * \sqrt{-a}) = (result_u + result_v * \sqrt{-a})^2
+                u = result_u.clone() * result_u.clone() - self.clone() * result_v.clone() * result_v.clone();
+                if u.is_zero() {
+                    return Some(result_u.clone() * result_v.clone().inv());
+                }
+                
+                // result_u + result_v * \sqrt{-a} = (result_u + result_v * \sqrt{-a})^2
+                result_u = u;
+                result_v = result_u.clone() * result_v.clone() + result_v.clone() * result_u.clone();
+            }
+        }
+    }
 }
 
 impl<'a> Neg for FiniteFieldElement<'a> {
@@ -218,7 +299,7 @@ impl Mul<BigInt> for FiniteFieldElement<'_> {
                 if ((digit >> i) & 1) == 1 {
                     result = result.clone() + tmp_value.clone();
                 }
-                tmp_value = tmp_value.clone() * tmp_value.clone();
+                tmp_value = tmp_value.clone() + tmp_value.clone();
             }
         }
 
@@ -230,16 +311,22 @@ impl Mul<BigInt> for FiniteFieldElement<'_> {
 #[cfg(test)]
 mod tests{
     use super::*;
-    use num::bigint::Sign;
-#[test]
-fn field_test() {
-    let p = BigUint::new(vec![11]);
-    let fp = FiniteField::new(&p);
-    let a = fp.gen(&BigInt::new(Sign::Minus,vec![2]));
-    let b = &a + &a;
-    let c = &b * &b;
+    #[test]
+    fn field_test() {
+        let prime_num = 97;
+        let p = BigUint::new(vec![prime_num]);
+        let fp = FiniteField::new(&p);
 
-    println!("{:?}", c);
-    println!("{:?}", c.inv());
-}
+        for _ in 0..100 {
+            let mut a = fp.rand(None);
+            while a.is_zero() {a = fp.rand(None);}
+            let b = &a + &a;
+            let c = &b * &b;
+
+            assert_eq!(c.pow(&BigInt::from(prime_num - 1)), fp.one());
+            let d = c.clone().sqrt().unwrap();
+            println!("{:?}^2 -> {:?}", d, c);
+            assert_eq!(d.clone() * d.clone(), c, "Wrong sqrt"); 
+        }
+    }
 }
