@@ -1,5 +1,5 @@
 //! Polynomial with field coefficient
-use crate::field::{Field, MultiplicativeInverse};
+use crate::field::{Field, FieldElement};
 use std::ops::{Add, Sub, Mul, Neg, Rem};
 use std::cmp::max;
 use std::fmt;
