@@ -12,6 +12,9 @@ pub trait Field<'a> : Clone + fmt::Debug {
     /// Trait for the multiplicative identity of a dynamic field type
     /// Output a field element
     fn one(&'a self) -> Self::Element;
+
+    /// Generate a random field element
+    fn rand(&'a self, size : Option<usize>) -> Self::Element;
 }
 
 /// FieldElement must refer a Field

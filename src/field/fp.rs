@@ -4,10 +4,11 @@ use super::*;
 use std::ops::{Add, Sub, Mul, Neg};
 use num::integer::ExtendedGcd;
 use num::{BigInt, BigUint, Zero, Integer, One, Signed};
-use num::bigint::{ToBigInt, Sign};
+use num::bigint::{ToBigInt, Sign, RandomBits};
 use num_prime::buffer::NaiveBuffer;
 use num_prime::buffer::PrimeBufferExt;
 use impl_ops::*;
+use rand::Rng;
 use std::ops;
 
 /// Type for a base of a finite field(extension degree = 1)
@@ -56,6 +57,21 @@ impl<'a> Field<'a> for FiniteField {
     /// Implement DynOne for [FiniteField](FiniteField)
     fn one(&'a self) -> Self::Element {
         self.gen(&BigInt::one())
+    }
+
+    /// Generate a random element
+    fn rand(&'a self, size : Option<usize>) -> Self::Element {
+        let mut rng = rand::thread_rng();
+        let num : BigInt = match size {
+            Some(size) => {
+                rng.sample(RandomBits::new(size.try_into().unwrap()))   
+            },
+            None => {
+                rng.sample(RandomBits::new(self.prime.bits()))
+            }
+        };
+
+        self.gen(&num)
     }
 }
 
