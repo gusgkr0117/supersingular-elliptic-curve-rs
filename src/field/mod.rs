@@ -1,6 +1,7 @@
 pub mod fp;
 use std::ops::{Add, Sub, Mul, Neg};
 use std::fmt;
+use num::BigInt;
 
 /// Base trait for Field types
 pub trait Field<'a> : Clone + fmt::Debug {
@@ -15,10 +16,10 @@ pub trait Field<'a> : Clone + fmt::Debug {
 
 /// FieldElement must refer a Field
 /// Thus it must take as input the lifetime of the Field
-pub trait FieldElement : Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Neg<Output=Self> + 
-MultiplicativeInverse + Sized + PartialEq + Clone + fmt::Debug {}
-
-/// Field elements has its multiplicative inverse
-pub trait MultiplicativeInverse {
+pub trait FieldElement : Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Mul<BigInt, Output=Self> + Neg<Output=Self> + 
+Sized + PartialEq + Clone + fmt::Debug {
+    /// Field elements has its multiplicative inverse
     fn inv(&self) -> Self;
+    /// Whether it's zero or not
+    fn is_zero(&self) -> bool;
 }

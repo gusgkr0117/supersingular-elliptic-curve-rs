@@ -73,23 +73,7 @@ impl<'a> fmt::Debug for FiniteFieldElement<'a> {
     }
 }
 
-impl<'a> FieldElement for FiniteFieldElement<'a> {}
-
-impl<'a> Neg for FiniteFieldElement<'a> {
-    type Output = Self;
-    fn neg(self) -> Self {
-        FiniteFieldElement { field: self.field, num: self.field.prime() - self.num }
-    }
-}
-
-impl<'a> PartialEq for FiniteFieldElement<'a> {
-    fn eq(&self, rhs:&Self) -> bool {
-        assert!(self.field.prime() == rhs.field.prime(), "The base field is not equal");
-        self.num == rhs.num
-    }
-}
-
-impl<'a> MultiplicativeInverse for FiniteFieldElement<'a> {
+impl<'a> FieldElement for FiniteFieldElement<'a> {
     fn inv(&self) -> Self {
         let num_i = self.num.to_bigint().unwrap();
         let prime_i = self.field.prime().to_bigint().unwrap();
@@ -105,6 +89,24 @@ impl<'a> MultiplicativeInverse for FiniteFieldElement<'a> {
             field : self.field,
             num : x.to_biguint().unwrap(),
         }
+    }
+
+    fn is_zero(&self) -> bool {
+        self.num.is_zero()
+    }
+}
+
+impl<'a> Neg for FiniteFieldElement<'a> {
+    type Output = Self;
+    fn neg(self) -> Self {
+        FiniteFieldElement { field: self.field, num: self.field.prime() - self.num }
+    }
+}
+
+impl<'a> PartialEq for FiniteFieldElement<'a> {
+    fn eq(&self, rhs:&Self) -> bool {
+        assert!(self.field.prime() == rhs.field.prime(), "The base field is not equal");
+        self.num == rhs.num
     }
 }
 
@@ -183,8 +185,27 @@ impl_op!(* |lhs: &FiniteFieldElement<'a>, rhs: FiniteFieldElement<'a>| -> Finite
 impl Mul for FiniteFieldElement<'_> {
     type Output = Self;
     fn mul(self, rhs : Self) -> Self {
-        let mut result = self.field.gen(&BigInt::zero());
+        let mut result = self.field.zero();
         result.num = (&self.num * &rhs.num) % &self.field.prime();
+        result
+    }
+}
+
+/// Scalar multiplication as Z-module
+impl Mul<BigInt> for FiniteFieldElement<'_> {
+    type Output = Self;
+    fn mul(self, rhs : BigInt) -> Self {
+        let mut result = self.field.zero();
+        let mut tmp_value = self.clone();
+        for digit in rhs.iter_u32_digits() {
+            for i in 0..32{
+                if ((digit >> i) & 1) == 1 {
+                    result = result.clone() + tmp_value.clone();
+                }
+                tmp_value = tmp_value.clone() * tmp_value.clone();
+            }
+        }
+
         result
     }
 }
