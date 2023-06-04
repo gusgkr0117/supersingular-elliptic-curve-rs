@@ -12,4 +12,6 @@ pub trait Group<'a> : Clone {
 /// FieldElement must refer a Field
 /// Thus it must take as input the lifetime of the Field
 pub trait GroupElement : Add<Output=Self> + Sub<Output=Self> + Neg<Output=Self> + 
-Sized + PartialEq + Clone + fmt::Debug {}
+Sized + PartialEq + Clone + fmt::Debug {
+    fn is_zero(&self) -> bool;
+}
