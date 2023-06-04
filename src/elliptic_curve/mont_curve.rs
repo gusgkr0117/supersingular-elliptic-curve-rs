@@ -19,11 +19,34 @@ impl<'a, F> MontgomeryCurve<'a, F> where F: Field<'a> + 'a {
         }
     }
 
-    fn gen(&'a self, (x,y,z) : (&F::Element, &F::Element, &F::Element)) -> MontgomeryCurvePoint<'a, F> {
+    pub fn gen(&'a self, (x,y,z) : (&F::Element, &F::Element, &F::Element)) -> MontgomeryCurvePoint<'a, F> {
         MontgomeryCurvePoint {
             curve : self,
             x: x.clone(), y: y.clone(), z: z.clone(),
         }
+    }
+
+    /// Generate a nonzero random point
+    pub fn rand(&'a self) -> MontgomeryCurvePoint<'a, F> {
+        let mut x : F::Element;
+        let y : F::Element;
+        loop {
+            x = self.field.rand(None);
+
+            // y^2 = x^3 + A * x^2 + x
+            let y_sqr = x.clone().pow(&BigInt::from(3)) + 
+            self.A.clone() * x.clone().pow(&BigInt::from(2)) +
+            x.clone();
+
+            y = match y_sqr.sqrt(){
+                Some(y) => y,
+                None => continue,
+            };
+        
+            break       
+        }
+
+        MontgomeryCurvePoint { curve: self, x, y, z: self.field.one() }
     }
 }
 
@@ -109,13 +132,15 @@ impl<'a, F> Add for MontgomeryCurvePoint<'a, F> where F: Field<'a> + 'a {
         }
 
         let lambda = match self == rhs {
-            true => {(self.y.clone() - rhs.y.clone()) * (self.x.clone() - rhs.x.clone()).inv()},
-            false => {(self.x.clone() * self.x.clone() * BigInt::from(3) + self.curve.A.clone() * self.x.clone() * BigInt::from(2) + self.curve.field.one()) * (self.y.clone() + self.y.clone()).inv()},
+            false => {(self.y.clone() - rhs.y.clone()) * (self.x.clone() - rhs.x.clone()).inv()},
+            true => {(self.x.clone() * self.x.clone() * BigInt::from(3) + self.curve.A.clone() * self.x.clone() * BigInt::from(2) + self.curve.field.one()) * (self.y.clone() * BigInt::from(2)).inv()},
         };
 
         let new_x = lambda.clone() * lambda.clone() - (self.x.clone() + rhs.x.clone()) - self.curve.A.clone();
         let new_y = lambda.clone() * (self.x.clone() - new_x.clone()) - self.y.clone();
 
+        assert!(new_y.clone() * new_y.clone() == new_x.clone() * new_x.clone() * new_x.clone() + self.curve.A.clone() * new_x.clone() * new_x.clone() + new_x.clone(),
+        "Addition is wrong!!!");
         self.curve.gen((&new_x, &new_y, &self.curve.field.one()))
     }
 }
@@ -129,18 +154,20 @@ impl<'a, F> Sub for MontgomeryCurvePoint<'a, F> where F: Field<'a> + 'a {
 
 #[cfg(test)]
 mod tests{
-    use crate::{field::{fp::FiniteField, Field}, group::Group};
-    use num::{BigUint, BigInt};
+    use crate::field::{fp::FiniteField, Field};
+    use num::{BigUint};
 
-    use super::{MontgomeryCurve, MontgomeryCurvePoint};
+    use super::{MontgomeryCurve};
 
     #[test]
     fn montgomery_curve_test() {
-        let fp = FiniteField::new(&BigUint::from(13 as u32));
+        let fp = FiniteField::new(&BigUint::from(97 as u32));
         let curve = MontgomeryCurve::new(&fp, fp.zero());
-        let point = curve.gen((&fp.gen(&BigInt::from(0)), &fp.gen(&BigInt::from(1)), &fp.gen(&BigInt::from(0))));
 
-        let Q = point.clone() + point.clone();
-        assert!(Q == curve.zero());
+        for _ in 0..1000{
+            let (p1, p2, p3) = (curve.rand(), curve.rand(), curve.rand());
+            // println!("{:?} {:?} {:?}", p1, p2, p3);
+            assert_eq!((p1.clone() + p2.clone()) + p3.clone(), p1.clone() + (p2.clone() + p3.clone()), "Associativity fail");
+        }
     }
 }
