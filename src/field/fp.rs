@@ -141,6 +141,7 @@ impl<'a> FieldElement for FiniteFieldElement<'a> {
             return None;
         }
 
+        // the case of p=4k+3
         if prime.clone() % (4 as u32) == BigUint::from(3 as u32) {
             let exp : BigUint = (prime.clone() + BigUint::one()) >> 2;
             return Some(self.pow(&exp.to_bigint().unwrap()));
@@ -152,6 +153,7 @@ impl<'a> FieldElement for FiniteFieldElement<'a> {
             v = self.field.one();
 
             // u + 1 * \sqrt{-a}
+            // choose a non-zero-divisor
             if u.clone() * u.clone() == -self.clone() {continue}
             
             // 1 + 0 * \sqrt{-a}
@@ -166,19 +168,19 @@ impl<'a> FieldElement for FiniteFieldElement<'a> {
                 for i in 0..32 {
                     // compute result_u + result_v * \sqrt{-a} = (result_u + result_v * \sqrt{-a})(u + v * \sqrt{-a})
                     if (digit >> i) & 1 == 1 {
-                        result_u = result_u.clone() * u.clone() - self.clone() * result_v.clone() * v.clone();
-                        result_v = result_v.clone() * u.clone() + result_u.clone() * v.clone();
+                        (result_u, result_v) = (result_u.clone() * u.clone() - self.clone() * result_v.clone() * v.clone(),
+                                                result_v.clone() * u.clone() + result_u.clone() * v.clone());
                     }
 
                     // compute u + v * \sqrt{-a} = (u + v * \sqrt{a})^2
-                    u = u.clone() * u.clone() - self.clone() * v.clone() * v.clone();
-                    v = u.clone() * v.clone() + v.clone() * u.clone();
+                    (u,v) = (u.clone() * u.clone() - self.clone() * v.clone() * v.clone(),
+                            u.clone() * v.clone() + v.clone() * u.clone());
                 }
             }
 
             if result_u.is_zero() || result_v.is_zero() {continue}
 
-            for _ in 0..100 {
+            for _ in 0..e {
                 // (u + v * \sqrt{-a}) = (result_u + result_v * \sqrt{-a})^2
                 u = result_u.clone() * result_u.clone() - self.clone() * result_v.clone() * result_v.clone();
                 if u.is_zero() {
@@ -186,9 +188,10 @@ impl<'a> FieldElement for FiniteFieldElement<'a> {
                 }
                 
                 // result_u + result_v * \sqrt{-a} = (result_u + result_v * \sqrt{-a})^2
-                result_u = u;
-                result_v = result_u.clone() * result_v.clone() + result_v.clone() * result_u.clone();
+                (result_u, result_v) = (u, result_u.clone() * result_v.clone() + result_v.clone() * result_u.clone());
             }
+
+            panic!("Unreachable!");
         }
     }
 }
