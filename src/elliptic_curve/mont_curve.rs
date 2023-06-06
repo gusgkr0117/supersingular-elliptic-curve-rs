@@ -26,6 +26,11 @@ impl<'a, F> MontgomeryCurve<'a, F> where F: Field<'a> + 'a {
         }
     }
 
+    pub fn j_invariant(&'a self) -> F::Element {
+        (self.A.clone() * self.A.clone() - self.field.one() * BigInt::from(3)).pow(&BigInt::from(3)) * BigInt::from(256) * 
+        (self.A.clone() * self.A.clone() - self.field.one() * BigInt::from(4)).inv()
+    }
+
     /// Generate a nonzero random point
     pub fn rand(&'a self) -> MontgomeryCurvePoint<'a, F> {
         let mut x : F::Element;
@@ -164,6 +169,7 @@ mod tests{
         let fp = FiniteField::new(&BigUint::from(97 as u32));
         let curve = MontgomeryCurve::new(&fp, fp.zero());
 
+        println!("j-invariant : {:?}", curve.j_invariant());
         for _ in 0..1000{
             let (p1, p2, p3) = (curve.rand(), curve.rand(), curve.rand());
             // println!("{:?} {:?} {:?}", p1, p2, p3);
