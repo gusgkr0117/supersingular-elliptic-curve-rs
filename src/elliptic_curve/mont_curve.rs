@@ -3,6 +3,7 @@ use crate::field::{Field, FieldElement};
 use crate::group::{Group, GroupElement};
 use std::ops::{Add, Sub, Neg};
 use num::BigInt;
+use impl_ops::impl_bin_ops;
 
 /// The structure of a montgomery curve
 #[derive(Clone, Debug)]
@@ -121,22 +122,22 @@ impl<'a, F> Neg for MontgomeryCurvePoint<'a, F> where F: Field<'a> + 'a {
     }
 }
 
+#[impl_bin_ops]
 impl<'a, F> Add for MontgomeryCurvePoint<'a, F> where F: Field<'a> + 'a {
-    type Output = Self;
-    fn add(self, rhs : Self) -> Self {
+    fn add(self, rhs : MontgomeryCurvePoint<'a, F>) -> MontgomeryCurvePoint<'a, F> {
         if self.is_zero() {
-            return rhs;
+            return rhs.clone();
         }
 
         if rhs.is_zero() {
-            return self;
+            return self.clone();
         }
 
-        if self == -rhs.clone() {
+        if self.clone() == -rhs.clone() {
             return self.curve.zero();
         }
 
-        let lambda = match self == rhs {
+        let lambda = match self.clone() == rhs.clone() {
             false => {(self.y.clone() - rhs.y.clone()) * (self.x.clone() - rhs.x.clone()).inv()},
             true => {(self.x.clone() * self.x.clone() * BigInt::from(3) + self.curve.A.clone() * self.x.clone() * BigInt::from(2) + self.curve.field.one()) * (self.y.clone() * BigInt::from(2)).inv()},
         };
@@ -150,10 +151,10 @@ impl<'a, F> Add for MontgomeryCurvePoint<'a, F> where F: Field<'a> + 'a {
     }
 }
 
+#[impl_bin_ops]
 impl<'a, F> Sub for MontgomeryCurvePoint<'a, F> where F: Field<'a> + 'a {
-    type Output = Self;
-    fn sub(self, rhs : Self) -> Self {
-        self + (-rhs)
+    fn sub(self, rhs : MontgomeryCurvePoint<'a, F>) -> MontgomeryCurvePoint<'a, F> {
+        self + (-rhs.clone())
     }
 }
 
@@ -173,7 +174,7 @@ mod tests{
         for _ in 0..1000{
             let (p1, p2, p3) = (curve.rand(), curve.rand(), curve.rand());
             // println!("{:?} {:?} {:?}", p1, p2, p3);
-            assert_eq!((p1.clone() + p2.clone()) + p3.clone(), p1.clone() + (p2.clone() + p3.clone()), "Associativity fail");
+            assert_eq!((&p1 +&p2) + &p3, &p1 + (&p2 + &p3), "Associativity fail");
         }
     }
 }

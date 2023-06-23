@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-impl_ops = "0.1.1"
+impl_ops = {path = "impl_ops"}
 num = { version = "0.4.0", features = ["rand"] }
 num-prime = { version = "0.4.3", features = ["num-bigint"] }
 num-rational = "0.4.1"

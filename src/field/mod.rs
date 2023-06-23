@@ -20,7 +20,8 @@ pub trait Field<'a> : Clone + fmt::Debug {
 
 /// FieldElement must refer a Field
 /// Thus it must take as input the lifetime of the Field
-pub trait FieldElement : Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Mul<BigInt, Output=Self> + Neg<Output=Self> + 
+pub trait FieldElement : Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> +
+Mul<BigInt, Output=Self> + Neg<Output=Self> + 
 Sized + PartialEq + Clone + fmt::Debug {
     /// Field elements has its multiplicative inverse
     fn inv(&self) -> Self;
