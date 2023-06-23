@@ -3,6 +3,7 @@ use num::bigint::ToBigInt;
 use num_rational::BigRational;
 use std::ops::{Add, Mul};
 use num_prime::buffer::{NaiveBuffer, PrimeBufferExt};
+use impl_ops::impl_bin_ops;
 
 /// B_p,\infty
 #[derive(Clone, Debug)]
@@ -37,9 +38,9 @@ pub struct QuaternionAlgebraElement<'a> {
     coefficient : [BigRational;4],
 }
 
+#[impl_bin_ops]
 impl<'a> Add for QuaternionAlgebraElement<'a> {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: QuaternionAlgebraElement<'a>) -> QuaternionAlgebraElement<'a> {
         QuaternionAlgebraElement {
             algebra : self.algebra,
             coefficient : 
@@ -51,9 +52,9 @@ impl<'a> Add for QuaternionAlgebraElement<'a> {
     }
 }
 
+#[impl_bin_ops]
 impl<'a> Mul for QuaternionAlgebraElement<'a> {
-    type Output = Self;
-    fn mul(self, rhs: Self) -> Self::Output {
+    fn mul(self, rhs: QuaternionAlgebraElement<'a>) -> QuaternionAlgebraElement<'a> {
         let mut result = self.algebra.zero();
         result.coefficient[0] = &self.coefficient[0] * &rhs.coefficient[0] -
                                 &self.coefficient[1] * &rhs.coefficient[1] -
@@ -86,7 +87,7 @@ mod tests {
     fn quaternion_test() {
         let quaternion_alg = QuaternionAlgebra::new(&BigUint::from(13 as u32));
         let a = quaternion_alg.gen([BigRational::new(BigInt::from(3), BigInt::from(4)), BigRational::new(BigInt::from(3), BigInt::from(4)), BigRational::new(BigInt::from(3), BigInt::from(4)), BigRational::new(BigInt::from(3), BigInt::from(4))]);
-        let b = a.clone() * a.clone();
-        println!("{:?}", b.clone() + b.clone());
+        let b = &a * &a;
+        println!("{:?}", &b + &b);
     }
 }
