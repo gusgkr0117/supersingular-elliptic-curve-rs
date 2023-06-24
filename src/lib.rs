@@ -6,3 +6,5 @@ pub mod poly;
 pub mod elliptic_curve;
 pub mod group;
 pub mod algebra;
+pub mod isogeny;
+pub mod endomorphism;
