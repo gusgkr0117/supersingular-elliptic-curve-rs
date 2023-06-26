@@ -1,4 +1,5 @@
 pub mod fp;
+pub mod fp2;
 use std::ops::{Add, Sub, Mul, Neg};
 use std::fmt;
 use num::BigInt;
@@ -16,6 +17,9 @@ pub trait Field<'a> : Clone + fmt::Debug {
     /// Generate a random field element
     /// self.rand(Some(size)) or self.rand(None)
     fn rand(&'a self, size : Option<usize>) -> Self::Element;
+    
+    /// Characteristic of the field
+    fn characteristic(&self) -> BigInt;
 }
 
 /// FieldElement must refer a Field

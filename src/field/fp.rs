@@ -72,6 +72,11 @@ impl<'a> Field<'a> for FiniteField {
 
         self.gen(&num)
     }
+
+    /// Characteristic
+    fn characteristic(&self) -> BigInt {
+        self.prime.clone().to_bigint().unwrap()
+    }
 }
 
 /// FiniteFieldElement type for the elements in [FiniteField](FiniteField)

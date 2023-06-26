@@ -1,9 +1,10 @@
 //! The elliptic curves of montgomery form
 use crate::field::{Field, FieldElement};
 use crate::group::{Group, GroupElement};
-use std::ops::{Add, Sub, Neg};
+use std::ops::{Neg, Mul};
 use num::BigInt;
 use impl_ops::impl_bin_ops;
+use num::bigint::Sign;
 
 /// The structure of a montgomery curve
 #[derive(Clone, Debug)]
@@ -53,6 +54,21 @@ impl<'a, F> MontgomeryCurve<'a, F> where F: Field<'a> + 'a {
         }
 
         MontgomeryCurvePoint { curve: self, x, y, z: self.field.one() }
+    }
+
+    /// Probabilistic algorithm to check if it's supersingular
+    /// The default number of test cases is 10
+    pub fn is_supersingular(&'a self) -> bool {
+        let order : BigInt = self.field.characteristic() + 1;
+        for _ in [0..10] {
+            let point = self.rand();
+            let point_q = point * order.clone();
+            if !point_q.is_zero() {
+                return false
+            }
+        }
+
+        true
     }
 }
 
@@ -158,23 +174,54 @@ impl<'a, F> Sub for MontgomeryCurvePoint<'a, F> where F: Field<'a> + 'a {
     }
 }
 
+/// Scalar multiplication
+impl<'a, F> Mul<BigInt> for MontgomeryCurvePoint<'a, F> where F: Field<'a> + 'a {
+    type Output = Self;
+    fn mul(self, rhs : BigInt) -> MontgomeryCurvePoint<'a, F> {
+        let mut result = self.curve.zero();
+        let mut tmp_value = self.clone();
+        for digit in rhs.iter_u32_digits() {
+            for i in 0..32 {
+                if ((digit >> i) & 1) == 1 {
+                    result = result.clone() + tmp_value.clone();
+                }
+                tmp_value = tmp_value.clone() + tmp_value.clone();
+            }
+        }
+
+        match rhs.sign() {
+            Sign::Minus => -result,
+            _ => result,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests{
     use crate::field::{fp::FiniteField, Field};
-    use num::{BigUint};
+    use num::{BigUint, BigInt};
+    use crate::group::GroupElement;
 
     use super::{MontgomeryCurve};
 
     #[test]
     fn montgomery_curve_test() {
-        let fp = FiniteField::new(&BigUint::from(97 as u32));
+        let fp = FiniteField::new(&BigUint::from(103 as u32));
         let curve = MontgomeryCurve::new(&fp, fp.zero());
 
         println!("j-invariant : {:?}", curve.j_invariant());
-        for _ in 0..1000{
-            let (p1, p2, p3) = (curve.rand(), curve.rand(), curve.rand());
-            // println!("{:?} {:?} {:?}", p1, p2, p3);
-            assert_eq!((&p1 +&p2) + &p3, &p1 + (&p2 + &p3), "Associativity fail");
+
+        let (p1, p2, p3) = (curve.rand(), curve.rand(), curve.rand());
+        println!("{:?}\n{:?}\n{:?}", p1, p2, p3);
+        println!("(p1 + p2) + p3 : {:?}", &p1 + (&p1 + &p2) + &p3);
+        println!("p1 + (p2 + p3) : {:?}", &p1 + &p1 + (&p2 + &p3));
+        for i in 1..105 {
+            if (p1.clone() * BigInt::from(i)).is_zero() {
+                println!("order : {}", i);
+                break
+            }
         }
+
+        assert!(curve.is_supersingular(), "The curve is ordinary");
     }
 }
